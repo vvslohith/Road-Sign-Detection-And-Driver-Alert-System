@@ -1,0 +1,194 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Real-Time Road Sign Recognition</title>
+    <!-- <link rel="stylesheet" href="style.css"> -->
+    <style>
+        body {
+            background-image: url('https://images.pexels.com/photos/531880/pexels-photo-531880.jpeg?cs=srgb&dl=pexels-pixabay-531880.jpg&fm=jpg');
+            display:flex;
+            flex-direction: column;
+            align-items: center;
+        }
+
+        #cardcontainer{
+            border: 3px solid black;
+            padding: 25px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            margin: 100px;
+            background-color: white;
+            border-radius: 15%;
+        }
+
+        .title{
+            border: 1px solid white;
+            border-radius: 25%;
+            text-align: center;
+            padding: 40px;
+            background-color:rgb(12, 71, 232);
+            color:white;
+        }
+
+        .buttongroup button{
+            height:40px;
+            width:150px;
+            background-color: rgb(12, 71, 232);
+            color:white;
+            margin:15px;
+            border-radius: 10px;
+        }
+
+        #realtimecard{
+            display:none;
+        }
+
+        #uploadcard{
+            display:none;
+        }
+
+        .realmatter{
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+
+        .uploadmatter{
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+
+        #video{
+            display:none;
+        }
+
+        .buttons button{
+            height:20px;
+            width:80px;
+            background-color: rgb(91, 94, 100);
+            color:white;
+            margin:15px;
+            border-radius: 10px;
+        }
+
+        #upload-result{
+            font-size: 20px;
+        }
+    </style>
+</head>
+<body>
+    <h1 class="title">Real-Time Road Sign Recognition And Driver Alert System</h1>
+
+    <div class="buttongroup">
+        <button id="realtimebutton" onClick="realblock()">Real-Time Video</button>
+        <button id="uploadbutton" onClick="uploadblock()">Upload Image</button>
+    </div>
+
+    <div id="cardcontainer">
+
+        <div id="realtimecard">
+            <div class="realmatter">
+                    <h3>Real-Time Recognition</h1>
+                    <div class="buttons">
+                        <button onclick="startCamera()">On Camera</button>
+                        <button onclick="stopCamera()">Off Camera</button>
+                    </div>
+                    <div>
+                        <img id="video" src="" width="640" height="480">
+                    </div>
+                    <div id="detected-label">Detecting...</div>
+            </div>
+           
+        </div>
+    
+        <br>
+
+        <div id="uploadcard">
+            <div class="uploadmatter">
+                <h2>Upload Image</h2>
+                    <form id="upload-form" enctype="multipart/form-data">
+                        <input type="file" name="file" id="file">
+                        <button type="submit">Upload</button>
+                    </form>
+                    <br>
+                <div id="upload-result">Upload Class: None</div>
+            </div>
+            
+        </div>
+    </div>
+    
+    
+    
+    <script>
+        var realcard=document.getElementById('realtimecard');
+        var uploadcard=document.getElementById('uploadcard');
+        var video=document.getElementById('video')
+
+
+        function realblock(){
+            realcard.style.display='block';
+            uploadcard.style.display='none';
+        }   
+
+        function uploadblock(){
+            realcard.style.display='none';
+            uploadcard.style.display='block';
+        }   
+        
+        
+        function startCamera() {
+            video.style.display='block';
+            fetch('/start_camera', { method: 'POST' })
+                .then(() => {
+                    document.getElementById('video').src = "{{ url_for('video_feed') }}";
+                    updateLabel();
+                });
+        }
+
+        function stopCamera() {
+            video.style.display='none';
+            fetch('/stop_camera', { method: 'POST' })
+                .then(() => {
+                    document.getElementById('video').src = "";
+                    document.getElementById('detected-label').textContent = "Camera stopped.";
+                });
+        }
+
+        function updateLabel() {
+            fetch('/current_label')
+                .then(response => response.json())
+                .then(data => {
+                    document.getElementById('detected-label').textContent = "Detected: " + data.label;
+                })
+                .catch(error => console.error('Error:', error));
+            setTimeout(updateLabel, 1000); // Update every second
+        }
+        document.getElementById('upload-form').onsubmit = function(event) {
+            event.preventDefault();
+            const formData = new FormData();
+            const fileInput = document.getElementById('file');
+            formData.append('file', fileInput.files[0]);
+
+            fetch('/upload', {
+                method: 'POST',
+                body: formData
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.error) {
+                    document.getElementById('upload-result').innerText = `Error: ${data.error}`;
+                } else {
+                    document.getElementById('upload-result').innerText = `Upload Class: ${data.recognized_class}`;
+                }
+            })
+            .catch(error => {
+                document.getElementById('upload-result').innerText = `Error: ${error}`;
+            });
+        }
+    </script>
+</body>
+</html>
